@@ -1,24 +1,26 @@
 #!/bin/bash
 
-# FIXME
-export HADOOP_HOME=/usr/local/Cellar/apache-spark/2.4.0/libexec
-export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
-export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib"
-# Check with
-#./hadoop checknative -a
-
 RUNNER=""
-if [ "x${SPARK_HOME}" = "x" ]; then
-    RUNNER="$(which spark-submit)"
-    if [ "x${RUNNER}" = "x" ]; then
-      echo "set SPARK_HOME"
+if [ -z "${SPARK_HOME}" ]; then
+    RUNNER="$(command -v spark-submit)"
+    if [ -z "${RUNNER}" ]; then
+      echo "Please set SPARK_HOME"
       exit 1
     fi
-elif [ "x$(command -v cygpath)" = "x" ]; then
-    RUNNER="$SPARK_HOME/bin/spark-submit"
+    export SPARK_HOME="$(dirname $(dirname ${RUNNER}))"
+elif [ -z "$(command -v cygpath)" ]; then
+    RUNNER="${SPARK_HOME}/bin/spark-submit"
 else 
-    RUNNER="$(cygpath -u $SPARK_HOME)/bin/spark-submit"
+    RUNNER="$(cygpath -u ${SPARK_HOME})/bin/spark-submit"
 fi
+
+# If Hadoop not defined, assume it's in the Spark home
+# If Spark complains about local libraries, then check with
+# hadoop checknative -a
+if [ -z "${HADOOP_HOME}" ]; then
+    export HADOOP_HOME="${SPARK_HOME}"
+fi
+export SPARK_SUBMIT_OPTS="-Djava.library.path=${SPARK_HOME}/lib"
 
 # Cleanup
 rm -rf out spark-warehouse
